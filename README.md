@@ -1,24 +1,18 @@
-# gnome-shell-extension-arrangeWindows
+# gnome-shell-extension-simulate-switching-workspaces-on-active-monitor
 
-Arrange windows on the monitor.
+Simulates switching workspaces on the active monitor.
 
 #### Hot keys
 
-* `Ctrl+Alt+1` Cascade windows
-* `Ctrl+Alt+2` Tiling windows
-* `Ctrl+Alt+3` Side by side windows
-* `Ctrl+Alt+4` Stack windows
+* `Ctrl+Alt+q` Switch to the previous workspace on the active monitor
+* `Ctrl+Alt+a` Switch to the next workspace on the active monitor
 
 ## Install
 
 ```
 make install
 ```
-restart system
+* restart system
 
-### From gnome extensions website
 
-https://extensions.gnome.org/extension/1604/arrange-windows/
 
-![record-screen](/arrange-windows.gif)
-![cascade](/cascade.png)

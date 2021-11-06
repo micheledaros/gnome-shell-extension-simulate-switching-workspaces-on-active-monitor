@@ -1,11 +1,11 @@
 
 schemas:
-	glib-compile-schemas arrangeWindows@sun.wxg@gmail.com/schemas/
+	glib-compile-schemas simulate-switching-workspaces-on-active-monitor@micheledaros.com/schemas/
 
 submit: schemas
-	cd arrangeWindows@sun.wxg@gmail.com/ && zip -r ~/arrangeWindows.zip *
+	cd simulate-switching-workspaces-on-active-monitor@micheledaros.com/ && zip -r ~/arrangeWindows.zip *
 
 install:
-	rm -rf ~/.local/share/gnome-shell/extensions/arrangeWindows@sun.wxg@gmail.com
-	cp -r arrangeWindows@sun.wxg@gmail.com ~/.local/share/gnome-shell/extensions/
+	rm -rf ~/.local/share/gnome-shell/extensions/simulate-switching-workspaces-on-active-monitor@micheledaros.com
+	cp -r simulate-switching-workspaces-on-active-monitor@micheledaros.com ~/.local/share/gnome-shell/extensions/
 
