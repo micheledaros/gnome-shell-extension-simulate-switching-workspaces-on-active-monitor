@@ -158,7 +158,8 @@ function addKeybinding() {
 }
 
 function removeKeybinding(){
-    Main.wm.removeKeybinding(HOTKEY_TILE);
+    Main.wm.removeKeybinding(HOTKEY_NEXT);
+    Main.wm.removeKeybinding(HOTKEY_PREVIOUS);
 }
 
 let controller;
