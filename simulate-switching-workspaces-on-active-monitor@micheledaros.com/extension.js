@@ -177,7 +177,6 @@ function enable() {
 
 function disable() {
     removeKeybinding();
-    controller.destroy();
     controller=null
 }
 
