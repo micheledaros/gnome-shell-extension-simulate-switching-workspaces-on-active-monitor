@@ -1,5 +1,5 @@
 <schemalist gettext-domain="gnome-shell-extensions">
-  <schema id="org.gnome.shell.extensions.switchWorkspacesOnMonitor" path="/org/gnome/shell/extensions/arrangeWindows/">
+  <schema id="org.gnome.shell.extensions.simulate-switching-workspaces-on-active-monitor" path="/org/gnome/shell/extensions/simulate-switching-workspaces-on-active-monitor/">
     <key name="switch-to-previous-workspace-on-active-monitor" type="as">
       <default><![CDATA[['<Control><Alt>q']]]></default>
       <summary>Key to tile</summary>

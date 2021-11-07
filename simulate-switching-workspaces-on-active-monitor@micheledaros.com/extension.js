@@ -18,7 +18,7 @@ const Slider = imports.ui.slider;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
-const SCHEMA = 'org.gnome.shell.extensions.switchWorkspacesOnMonitor';
+const SCHEMA = 'org.gnome.shell.extensions.simulate-switching-workspaces-on-active-monitor';
 const HOTKEY_NEXT = 'switch-to-next-workspace-on-active-monitor';
 const HOTKEY_PREVIOUS = 'switch-to-previous-workspace-on-active-monitor';
 
