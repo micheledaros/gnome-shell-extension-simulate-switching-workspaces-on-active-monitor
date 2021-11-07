@@ -143,7 +143,7 @@ class Controller  {
 
 
 function addKeybinding() {
-    let modeType = Shell.ActionMode.NORMAL;
+    let modeType = Shell.ActionMode.ALL;
 
 
     Main.wm.addKeybinding(HOTKEY_NEXT,
