@@ -178,6 +178,7 @@ function enable() {
 function disable() {
     removeKeybinding();
     controller.destroy();
+    controller=null
 }
 
 function maybeLog( value) {
