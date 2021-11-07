@@ -26,6 +26,8 @@ const HOTKEY_PREVIOUS = 'switch-to-previous-workspace-on-active-monitor';
 const UP = -1
 const DOWN = 1
 
+const DEBUG_ACTIVE  = false
+
 class WindowWrapper {
     constructor(windowActor, monitorIndex, workspaceIndex) {
       this.windowActor = windowActor;
@@ -49,7 +51,7 @@ class WindowWrapper {
 
     toString() {
         return `
-            title: ${this.getTitle()} 
+            title: ${this.getTitle()}
             windowType: ${this.windowType}
             monitorIndex: ${this.getMonitorIndex()}
             workspaceIndex: ${this.getWorkspaceIndex()}
@@ -68,10 +70,10 @@ class WindowWrapper {
   }
 
   class WorkSpacesService {
-    
+
     constructor() {
         this.nWorkspaces =  this.getNWorkspaces()
-        log (`  workspacesService.nWorkspaces: ${this.nWorkspaces} `)
+        maybeLog (`  workspacesService.nWorkspaces: ${this.nWorkspaces} `)
     }
 
     getNWorkspaces () {
@@ -80,33 +82,34 @@ class WindowWrapper {
 
     moveToWorkspace (windowWrapper, direction) {
         let nextWorkspace = (this.nWorkspaces + windowWrapper.getWorkspaceIndex() + direction) % this.nWorkspaces
-        log (`next workspace will be ${nextWorkspace}`)
+        maybeLog (`next workspace will be ${nextWorkspace}`)
         windowWrapper.moveToWorkSpace(nextWorkspace)
     }
-    
+
     switchWorkspaceOnActiveMonitor(direction) {
-        log ('begin  switchActiveWorkspace')
+        maybeLog ('begin  switchActiveWorkspace')
 
         let workSpacesService = new WorkSpacesService()
 
         let wrappers = this.getWindowWrappers()
 
-        log (`  got ${wrappers.length} windows`)
+        maybeLog (`  got ${wrappers.length} windows`)
         wrappers
-            .forEach (it => {log(it.toString())})
+            .forEach (it => {maybeLog(it.toString())})
 
-        
+
         let focusedMonitorIndex = this.getFocusedMonitor()
 
         let windowsToMove = wrappers
             .filter(it => it.isNormal())
             .filter(it => it.initialMonitorIndex === focusedMonitorIndex)
-        log (' those windows will be moved: ')
-            windowsToMove
-            .forEach (it => {log(it.toString())})
 
-        
-        windowsToMove.forEach(it => workSpacesService.moveToWorkspace(it, direction))    
+        maybeLog (' those windows will be moved: ')
+            windowsToMove
+            .forEach (it => {maybeLog(it.toString())})
+
+
+        windowsToMove.forEach(it => workSpacesService.moveToWorkspace(it, direction))
     }
 
     getWindowWrappers() {
@@ -130,12 +133,12 @@ class Controller  {
 
     up() {
         new WorkSpacesService().switchWorkspaceOnActiveMonitor(UP)
-    }   
+    }
 
 
     down() {
         new WorkSpacesService().switchWorkspaceOnActiveMonitor(DOWN)
-    } 
+    }
 }
 
 
@@ -153,8 +156,8 @@ function addKeybinding() {
     controller._gsettings,
                         Meta.KeyBindingFlags.NONE,
                         modeType,
-                        controller.down.bind(controller));                      
-   
+                        controller.down.bind(controller));
+
 }
 
 function removeKeybinding(){
@@ -175,4 +178,10 @@ function enable() {
 function disable() {
     removeKeybinding();
     controller.destroy();
+}
+
+function maybeLog( value) {
+    if (DEBUG_ACTIVE) {
+        log(value)
+    }
 }
