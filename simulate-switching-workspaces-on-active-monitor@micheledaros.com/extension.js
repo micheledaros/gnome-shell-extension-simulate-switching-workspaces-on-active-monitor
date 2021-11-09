@@ -71,19 +71,52 @@ class WindowWrapper {
 class WorkSpacesService {
   constructor() {
     this._initNWorskpaces();
-    maybeLog(`  workspacesService.nWorkspaces: ${this._nWorkspaces} `);
+    this._activeWorkspaceIndex= global.workspace_manager.get_active_workspace_index()
   }
 
   _initNWorskpaces() {
     this._nWorkspaces = global.workspace_manager.get_n_workspaces();
+    maybeLog(`  workspacesService.nWorkspaces: ${this._nWorkspaces} `);
   }
 
-  _moveToWorkspace(windowWrapper, direction) {
+  _moveToDirection(windowWrapper, direction) {
     let nextWorkspace =
       (this._nWorkspaces + windowWrapper.getWorkspaceIndex() + direction) %
       this._nWorkspaces;
     maybeLog(`next workspace will be ${nextWorkspace}`);
     windowWrapper.moveToWorkSpace(nextWorkspace);
+  }
+
+  onWorkspaceChanged() {
+    this._initNWorskpaces();
+
+    const nextWorkspace = global.workspace_manager.get_active_workspace_index()
+    const direction = (nextWorkspace > this._activeWorkspaceIndex) ? DOWN : UP
+    const diff = (nextWorkspace > this._activeWorkspaceIndex)
+        ? nextWorkspace - this._activeWorkspaceIndex
+        : this._activeWorkspaceIndex - nextWorkspace
+    const shift = direction * diff;
+
+    const focusedMonitor = this._getFocusedMonitor()
+    this._activeWorkspaceIndex = nextWorkspace
+
+    maybeLog (` workspaceChanged
+        direction: ${direction}
+        diff: ${diff}
+        activeMonitor: ${focusedMonitor}
+    `)
+
+    let focusedMonitorIndex = this._getFocusedMonitor();
+
+
+    this.getWindowWrappers()
+        .filter((it) => it.isNormal())
+        .filter((it) => it.initialMonitorIndex != focusedMonitorIndex)
+        .forEach(it => {this._moveToDirection(it, shift)})
+
+
+    maybeLog("moved some windows around")
+
   }
 
   switchWorkspaceOnActiveMonitor(direction) {
@@ -98,7 +131,7 @@ class WorkSpacesService {
       maybeLog(it.toString());
     });
 
-    let focusedMonitorIndex = this.getFocusedMonitor();
+    let focusedMonitorIndex = this._getFocusedMonitor();
 
     let windowsToMove = wrappers
       .filter((it) => it.isNormal())
@@ -109,14 +142,14 @@ class WorkSpacesService {
       maybeLog(it.toString());
     });
 
-    windowsToMove.forEach((it) => this._moveToWorkspace(it, direction));
+    windowsToMove.forEach((it) => this._moveToDirection(it, direction));
   }
 
   getWindowWrappers() {
     return global.get_window_actors().map((x) => new WindowWrapper(x, x, x));
   }
 
-  getFocusedMonitor() {
+  _getFocusedMonitor() {
     return global.display.get_current_monitor();
   }
 }
@@ -169,14 +202,18 @@ function init(metadata) {}
 function enable() {
   log("enabling...");
 
-  global.workspace_manager.connect("active-workspace-changed", function () {
-    log("caught event");
-  });
+
 
   workspaceService = new WorkSpacesService();
   controller = new Controller(workspaceService);
+  global.workspace_manager.connect("active-workspace-changed", onWorkspaceChanged)
+
   addKeybinding();
   log("enabled");
+}
+
+function onWorkspaceChanged() {
+    workspaceService.onWorkspaceChanged()
 }
 
 function disable() {
