@@ -72,16 +72,16 @@ class WindowWrapper {
   class WorkSpacesService {
 
     constructor() {
-        this.nWorkspaces =  this.getNWorkspaces()
-        maybeLog (`  workspacesService.nWorkspaces: ${this.nWorkspaces} `)
+        this._initNWorskpaces ()
+        maybeLog (`  workspacesService.nWorkspaces: ${this._nWorkspaces} `)
     }
 
-    getNWorkspaces () {
-        return global.workspace_manager.get_n_workspaces()
+    _initNWorskpaces () {
+        this._nWorkspaces = global.workspace_manager.get_n_workspaces()
     }
 
-    moveToWorkspace (windowWrapper, direction) {
-        let nextWorkspace = (this.nWorkspaces + windowWrapper.getWorkspaceIndex() + direction) % this.nWorkspaces
+    _moveToWorkspace (windowWrapper, direction) {
+        let nextWorkspace = (this._nWorkspaces + windowWrapper.getWorkspaceIndex() + direction) % this._nWorkspaces
         maybeLog (`next workspace will be ${nextWorkspace}`)
         windowWrapper.moveToWorkSpace(nextWorkspace)
     }
@@ -89,7 +89,7 @@ class WindowWrapper {
     switchWorkspaceOnActiveMonitor(direction) {
         maybeLog ('begin  switchActiveWorkspace')
 
-        let workSpacesService = new WorkSpacesService()
+        this._initNWorskpaces()
 
         let wrappers = this.getWindowWrappers()
 
@@ -109,7 +109,7 @@ class WindowWrapper {
             .forEach (it => {maybeLog(it.toString())})
 
 
-        windowsToMove.forEach(it => workSpacesService.moveToWorkspace(it, direction))
+        windowsToMove.forEach(it => this._moveToWorkspace(it, direction))
     }
 
     getWindowWrappers() {
@@ -127,17 +127,18 @@ class WindowWrapper {
 
 
 class Controller  {
-    constructor() {
+    constructor(workspaceService) {
+        this._workspaceService = workspaceService
         this._gsettings = ExtensionUtils.getSettings(SCHEMA);
     }
 
     up() {
-        new WorkSpacesService().switchWorkspaceOnActiveMonitor(UP)
+        this._workspaceService.switchWorkspaceOnActiveMonitor(UP)
     }
 
 
     down() {
-        new WorkSpacesService().switchWorkspaceOnActiveMonitor(DOWN)
+        this._workspaceService.switchWorkspaceOnActiveMonitor(DOWN)
     }
 }
 
@@ -166,13 +167,23 @@ function removeKeybinding(){
 }
 
 let controller;
+let workspaceService;
+
 
 function init(metadata) {
 }
 
 function enable() {
-    controller = new Controller();
+    log("enabling...")
+
+    global.workspace_manager.connect("active-workspace-changed", function() {
+        log("caught event")
+    })
+
+    workspaceService = new WorkSpacesService();
+    controller = new Controller(workspaceService);
     addKeybinding();
+    log("enabled")
 }
 
 function disable() {
