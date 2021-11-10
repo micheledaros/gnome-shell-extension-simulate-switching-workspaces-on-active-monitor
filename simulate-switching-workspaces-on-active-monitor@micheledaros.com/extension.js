@@ -196,20 +196,16 @@ function removeKeybinding() {
 
 let controller;
 let workspaceService;
+let listenerId;
 
 function init(metadata) {}
 
 function enable() {
-  log("enabling...");
-
-
 
   workspaceService = new WorkSpacesService();
   controller = new Controller(workspaceService);
-  global.workspace_manager.connect("active-workspace-changed", onWorkspaceChanged)
-
+  listenerId = global.workspace_manager.connect("active-workspace-changed", onWorkspaceChanged)
   addKeybinding();
-  log("enabled");
 }
 
 function onWorkspaceChanged() {
@@ -217,8 +213,10 @@ function onWorkspaceChanged() {
 }
 
 function disable() {
+  global.workspace_manager.disconnect(listenerId)
   removeKeybinding();
   controller = null;
+  workspaceService = null;
 }
 
 function maybeLog(value) {
