@@ -94,6 +94,7 @@ class WorkSpacesService {
       maybeLog(
         `not switching to previously active workspace because automaticSwitching is disabled`
       );
+      return 
     }
 
     this._initNWorskpaces();
@@ -114,6 +115,7 @@ class WorkSpacesService {
         diff: ${diff}
         activeMonitor: ${focusedMonitor}
     `);
+
 
     let focusedMonitorIndex = this._getFocusedMonitor();
 
@@ -188,9 +190,13 @@ class ConfigurationService {
   }
 
   conditionallyEnableAutomaticSwitching() {
+
+
+
     this._anIncompatibleExtensionIsActive =
-      Main.extensionManager._enabledExtensions.some((it) => {
-        this._incompatibleExtensions.includes(it);
+      this._incompatibleExtensions.some((it) => {
+        let extension = imports.ui.main.extensionManager.lookup(it)
+        return (extension && extension.state == ExtensionUtils.ExtensionState.ENABLED)
       });
 
     this._dynamicWorspaces = Meta.prefs_get_dynamic_workspaces();
@@ -201,25 +207,9 @@ class ConfigurationService {
   }
 
   toString() {
-
-    if (this.automaticSwitchingIsEnabled()) {
-      "automatic switching is enabled"
-    }
-
-    return `
-    in order to use the extension, you need to ${[
-      _anIncompatibleExtensionIsActive
-        ? `- disable the following extensions: ${this.__incompatibleExtensions}`
-        : null,
-      _dynamicWorspaces ? `- disable dynamic workspaces` : null,
-    ]
-      .filter((it) => {
-        it != null;
-      })
-      .join("\n")}
-    `;
-
-
+   return `
+      anIncompatibleExtensionIsActive: ${this._anIncompatibleExtensionIsActive} 
+      dynamicWorspaces: ${this._dynamicWorspaces}`
   }
 }
 
@@ -251,28 +241,49 @@ function removeKeybinding() {
 let controller;
 let workspaceService;
 let configurationService;
-let listenerId;
 
-function init(metadata) {}
-
-function enable() {
-  configurationService = new ConfigurationService();
-  workspaceService = new WorkSpacesService(configurationService);
-  controller = new Controller(workspaceService);
-  listenerId = global.workspace_manager.connect(
-    "active-workspace-changed",
-    onWorkspaceChanged
-  );
-  addKeybinding();
-}
+let workSpaceChangedListener;
 
 function onWorkspaceChanged() {
   workspaceService.switchToPreviouslyActiveWorkspaceOnInactiveMonitors();
 }
 
+function onExtensionStateChanged(extension,state) {
+
+  maybeLog (`an extension state changed ${extension.uid}, ${state.state}`)
+  configurationService.conditionallyEnableAutomaticSwitching();
+  maybeLog (configurationService.toString())
+}
+
+function enable() {
+  configurationService = new ConfigurationService();
+  workspaceService = new WorkSpacesService(configurationService);
+  controller = new Controller(workspaceService);
+  workSpaceChangedListener = global.workspace_manager.connect(
+    "active-workspace-changed",
+    onWorkspaceChanged
+  );
+
+  extensionStateChangedListener = Main.extensionManager.connect(
+    "extension-state-changed",
+    onExtensionStateChanged
+  );
+
+  addKeybinding();
+
+  maybeLog(configurationService.toString())
+}
+
 function disable() {
-  global.workspace_manager.disconnect(listenerId);
   removeKeybinding();
+  if (workSpaceChangedListener) {
+    global.workspace_manager.disconnect(workSpaceChangedListener);
+  }
+  if (extensionStateChangedListener) {
+    global.workspace_manager.disconnect(extensionStateChangedListener);
+  }
+  workSpaceChangedListener = null;
+  extensionStateChangedListener = null;
   controller = null;
   workspaceService = null;
 }
