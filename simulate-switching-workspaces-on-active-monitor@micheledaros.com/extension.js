@@ -241,11 +241,11 @@ function removeKeybinding() {
 let controller;
 let workspaceService;
 let configurationService;
-
 let workSpaceChangedListener;
+let originalActivateWithFocus
 
 function onWorkspaceChanged() {
-  workspaceService.switchToPreviouslyActiveWorkspaceOnInactiveMonitors();
+ // workspaceService.switchToPreviouslyActiveWorkspaceOnInactiveMonitors();
 }
 
 function onExtensionStateChanged(extension,state) {
@@ -255,7 +255,17 @@ function onExtensionStateChanged(extension,state) {
   maybeLog (configurationService.toString())
 }
 
+function activateWithFocus (window, timestamp) {
+  log(`in overridden activate_with_focus`)
+  return originalActivateWithFocus.call(this, window, timestamp);
+}
+
 function enable() {
+
+  originalActivateWithFocus = Meta.Workspace.prototype.activate_with_focus;
+  Meta.Workspace.prototype.activate_with_focus = activateWithFocus
+
+
   configurationService = new ConfigurationService();
   workspaceService = new WorkSpacesService(configurationService);
   controller = new Controller(workspaceService);
@@ -268,6 +278,8 @@ function enable() {
     "extension-state-changed",
     onExtensionStateChanged
   );
+
+
 
   addKeybinding();
 
@@ -282,6 +294,11 @@ function disable() {
   if (extensionStateChangedListener) {
     global.workspace_manager.disconnect(extensionStateChangedListener);
   }
+
+  if (originalActivateWithFocus) {
+    Meta.Workspace.prototype.activate_with_focus = originalActivateWithFocus
+  }
+
   workSpaceChangedListener = null;
   extensionStateChangedListener = null;
   controller = null;
