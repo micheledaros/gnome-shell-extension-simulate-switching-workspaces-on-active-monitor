@@ -74,6 +74,7 @@ class WorkSpacesService {
     this._initNWorskpaces();
     this._activeWorkspaceIndex =
       global.workspace_manager.get_active_workspace_index();
+    this._monitorActivatedWithFocus=null;
   }
 
   _initNWorskpaces() {
@@ -87,6 +88,12 @@ class WorkSpacesService {
       this._nWorkspaces;
     maybeLog(`next workspace will be ${nextWorkspace}`);
     windowWrapper.moveToWorkSpace(nextWorkspace);
+  }
+
+  windowActivatedWithFocus(window) {
+    let monitor = window.get_monitor();
+    log(`next active monitor will be ${monitor}`)
+    this._monitorActivatedWithFocus = monitor;
   }
 
   switchToPreviouslyActiveWorkspaceOnInactiveMonitors() {
@@ -107,17 +114,18 @@ class WorkSpacesService {
         : this._activeWorkspaceIndex - nextWorkspace;
     const shift = direction * diff;
 
-    const focusedMonitor = this._getFocusedMonitor();
+    const focusedMonitorIndex = this._monitorActivatedWithFocus != null
+        ? this._monitorActivatedWithFocus
+        : this._getFocusedMonitor();
+
+    this._monitorActivatedWithFocus = null
     this._activeWorkspaceIndex = nextWorkspace;
 
     maybeLog(` workspaceChanged
         direction: ${direction}
         diff: ${diff}
-        activeMonitor: ${focusedMonitor}
+        activeMonitor: ${focusedMonitorIndex}
     `);
-
-
-    let focusedMonitorIndex = this._getFocusedMonitor();
 
     this._getWindowWrappers()
       .filter((it) => it.isNormal())
@@ -191,8 +199,6 @@ class ConfigurationService {
 
   conditionallyEnableAutomaticSwitching() {
 
-
-
     this._anIncompatibleExtensionIsActive =
       this._incompatibleExtensions.some((it) => {
         let extension = imports.ui.main.extensionManager.lookup(it)
@@ -203,7 +209,8 @@ class ConfigurationService {
   }
 
   automaticSwitchingIsEnabled() {
-    return !this._anIncompatibleExtensionIsActive && !this._dynamicWorspaces;
+    return true
+    //return !this._anIncompatibleExtensionIsActive && !this._dynamicWorspaces;
   }
 
   toString() {
@@ -245,7 +252,7 @@ let workSpaceChangedListener;
 let originalActivateWithFocus
 
 function onWorkspaceChanged() {
- // workspaceService.switchToPreviouslyActiveWorkspaceOnInactiveMonitors();
+  workspaceService.switchToPreviouslyActiveWorkspaceOnInactiveMonitors();
 }
 
 function onExtensionStateChanged(extension,state) {
@@ -257,6 +264,8 @@ function onExtensionStateChanged(extension,state) {
 
 function activateWithFocus (window, timestamp) {
   log(`in overridden activate_with_focus`)
+
+  workspaceService.windowActivatedWithFocus(window)
   return originalActivateWithFocus.call(this, window, timestamp);
 }
 
