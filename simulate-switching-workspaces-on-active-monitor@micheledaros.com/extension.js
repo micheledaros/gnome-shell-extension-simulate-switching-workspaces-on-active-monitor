@@ -26,7 +26,7 @@ const HOTKEY_PREVIOUS = "switch-to-previous-workspace-on-active-monitor";
 const UP = -1;
 const DOWN = 1;
 
-const DEBUG_ACTIVE = false;
+const DEBUG_ACTIVE = true;
 
 class WindowWrapper {
   constructor(windowActor, monitorIndex, workspaceIndex) {
@@ -69,7 +69,8 @@ class WindowWrapper {
 }
 
 class WorkSpacesService {
-  constructor() {
+  constructor(_configurationService) {
+    this._configurationService = _configurationService;
     this._initNWorskpaces();
     this._activeWorkspaceIndex =
       global.workspace_manager.get_active_workspace_index();
@@ -89,6 +90,12 @@ class WorkSpacesService {
   }
 
   switchToPreviouslyActiveWorkspaceOnInactiveMonitors() {
+    if (!this._configurationService.automaticSwitchingIsEnabled()) {
+      maybeLog(
+        `not switching to previously active workspace because automaticSwitching is disabled`
+      );
+    }
+
     this._initNWorskpaces();
 
     const nextWorkspace = global.workspace_manager.get_active_workspace_index();
@@ -170,6 +177,52 @@ class Controller {
   }
 }
 
+class ConfigurationService {
+  _incompatibleExtensions = [
+    "dash-to-dock@micxgx.gmail.com",
+    "ubuntu-dock@ubuntu.com",
+  ];
+
+  constructor() {
+    this.conditionallyEnableAutomaticSwitching();
+  }
+
+  conditionallyEnableAutomaticSwitching() {
+    this._anIncompatibleExtensionIsActive =
+      Main.extensionManager._enabledExtensions.some((it) => {
+        this._incompatibleExtensions.includes(it);
+      });
+
+    this._dynamicWorspaces = Meta.prefs_get_dynamic_workspaces();
+  }
+
+  automaticSwitchingIsEnabled() {
+    return !this._anIncompatibleExtensionIsActive && !this._dynamicWorspaces;
+  }
+
+  toString() {
+
+    if (this.automaticSwitchingIsEnabled()) {
+      "automatic switching is enabled"
+    }
+
+    return `
+    in order to use the extension, you need to ${[
+      _anIncompatibleExtensionIsActive
+        ? `- disable the following extensions: ${this.__incompatibleExtensions}`
+        : null,
+      _dynamicWorspaces ? `- disable dynamic workspaces` : null,
+    ]
+      .filter((it) => {
+        it != null;
+      })
+      .join("\n")}
+    `;
+
+
+  }
+}
+
 function addKeybinding() {
   let modeType = Shell.ActionMode.ALL;
 
@@ -197,14 +250,14 @@ function removeKeybinding() {
 
 let controller;
 let workspaceService;
+let configurationService;
 let listenerId;
 
 function init(metadata) {}
 
 function enable() {
-  log(`yeeeeeeeeeeeeeee`);
-  log(Meta.prefs_get_dynamic_workspaces());
-  workspaceService = new WorkSpacesService();
+  configurationService = new ConfigurationService();
+  workspaceService = new WorkSpacesService(configurationService);
   controller = new Controller(workspaceService);
   listenerId = global.workspace_manager.connect(
     "active-workspace-changed",
