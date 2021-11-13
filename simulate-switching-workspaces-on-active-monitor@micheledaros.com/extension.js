@@ -250,6 +250,8 @@ let workspaceService;
 let configurationService;
 let workSpaceChangedListener;
 let originalActivateWithFocus
+let originalActivate
+let originalActivateWithWorkspace
 
 function onWorkspaceChanged() {
   workspaceService.switchToPreviouslyActiveWorkspaceOnInactiveMonitors();
@@ -269,11 +271,28 @@ function activateWithFocus (window, timestamp) {
   return originalActivateWithFocus.call(this, window, timestamp);
 }
 
+function myActivate (arg1, arg2, arg3) {
+  log(`in overridden activate`)
+  workspaceService.windowActivatedWithFocus(this)
+  return originalActivate.call(this, arg1);
+}
+
+function myActivateWithWorkspace (arg1, arg2) {
+  log(`in overridden activate with workspace`)
+
+  return originalActivateWithWorkspace.call(this, arg1, arg2);
+}
+
 function enable() {
 
   originalActivateWithFocus = Meta.Workspace.prototype.activate_with_focus;
   Meta.Workspace.prototype.activate_with_focus = activateWithFocus
 
+  originalActivate = Meta.Window.prototype.activate;
+  Meta.Window.prototype.activate = myActivate
+
+  originalActivateWithWorkspace = Meta.Window.prototype.activate_with_workspace;
+  Meta.Window.prototype.activate_with_workspace = myActivateWithWorkspace
 
   configurationService = new ConfigurationService();
   workspaceService = new WorkSpacesService(configurationService);
@@ -288,12 +307,19 @@ function enable() {
     onExtensionStateChanged
   );
 
+  extensionStateChangedListener = Main.Window.connect(
+      "raised",
+      raised
+  );
+
 
 
   addKeybinding();
 
   maybeLog(configurationService.toString())
 }
+
+
 
 function disable() {
   removeKeybinding();
