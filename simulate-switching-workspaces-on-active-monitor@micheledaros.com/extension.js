@@ -163,7 +163,7 @@ class WorkSpacesService {
 class Controller {
     constructor(workspaceService) {
         this._workspaceService = workspaceService;
-        this._gsettings = ExtensionUtils.getSettings(SCHEMA);
+        this._gsettings = ExtensionUtils.getSettings();
     }
 
     up() {
