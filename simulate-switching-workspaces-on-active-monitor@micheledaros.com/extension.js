@@ -180,16 +180,18 @@ class ConfigurationService {
     constructor() {
         this._appActivateHasRightImplementation = false;
         this._staticWorkspaces = false
+        this._spanDisplays = false
     }
 
     conditionallyEnableAutomaticSwitching() {
         this._appActivateHasRightImplementation = Shell.App.prototype.activate == overridenAppActivate
         this._staticWorkspaces = true
+        this._spanDisplays = true
         maybeLog(this.toString())
     }
 
     automaticSwitchingIsEnabled() {
-        return this._appActivateHasRightImplementation && this._staticWorkspaces
+        return this._appActivateHasRightImplementation && this._staticWorkspaces && this._spanDisplays
     }
 
     toString() {
@@ -197,6 +199,7 @@ class ConfigurationService {
                 automaticSwitchingIsEnabled: ${this.automaticSwitchingIsEnabled()} 
                 appActivateHasRightImplementation: ${this._appActivateHasRightImplementation} 
                 staticWorkspaces: ${this._staticWorkspaces}
+                spanDisplays: ${this._spanDisplays}
                 `
     }
 }
