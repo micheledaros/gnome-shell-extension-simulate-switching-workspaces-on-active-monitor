@@ -1,7 +1,8 @@
-const Meta = imports.gi.Meta;
-const Shell = imports.gi.Shell;
+const { Clutter, Shell, St, Meta } = imports.gi;
 const Main = imports.ui.main;
 const ExtensionUtils = imports.misc.extensionUtils;
+const PanelMenu = imports.ui.panelMenu;
+const PopupMenu = imports.ui.popupMenu;
 
 const SCHEMA = "org.gnome.shell.extensions.simulate-switching-workspaces-on-active-monitor";
 const HOTKEY_NEXT = "switch-to-next-workspace-on-active-monitor";
@@ -181,6 +182,9 @@ class ConfigurationService {
         this._appActivateHasRightImplementation = false;
         this._staticWorkspaces = false
         this._spanDisplays = false
+        this._warningMenu = null
+        this.warningItem = null
+        this._warningMenuText = null
     }
 
     conditionallyEnableAutomaticSwitching() {
@@ -190,8 +194,71 @@ class ConfigurationService {
         maybeLog(this.toString())
     }
 
+
     automaticSwitchingIsEnabled() {
         return this._appActivateHasRightImplementation && this._staticWorkspaces && this._spanDisplays
+    }
+
+    eventuallyShowWarningMenu() {
+        if (!this.automaticSwitchingIsEnabled()) {
+            this._showWarningMenu()
+        } else {
+            this.eventuallyDestroyWarningMenu()
+        }
+    }
+
+    eventuallyDestroyWarningMenu() {
+        maybeLog("warningMenu should be removed")
+        if (this._warningMenu){
+            maybeLog("destroying warningMenu")
+            this._warningMenu.destroy()
+            this._warningMenu = null;
+            this.warningItem = null
+            this._warningMenuText = null
+        }
+    }
+
+    _showWarningMenu() {
+        maybeLog("warningMenu should be shown")
+        if (this._warningMenu == null) {
+            maybeLog("building warning menu")
+            this._warningMenu = new PanelMenu.Button(0.0, _('simulate-switching-workspaces-on-active-monitor'));
+            let warningSymbol = new St.Label({
+                text: '\u26a0',  // ⚠, warning
+                y_expand: true,
+                y_align: Clutter.ActorAlign.CENTER});
+            this._warningMenu.add_child(warningSymbol);
+            this._warningMenu.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+            this._warningItem = new PopupMenu.PopupMenuItem(
+                "just a placehoder text"
+            );
+            this._warningMenu.menu.addMenuItem(this._warningItem)
+            maybeLog("adding the warning menu to the status area")
+            Main.panel.addToStatusArea('drive-menu', this._warningMenu);
+        }
+        let text = this.getProblems()
+        if (text !== this._warningMenuText) {
+            this._warningItem.label.set_text(text);
+            this._warningMenuText=text;
+        }
+    }
+
+    _PROBLEM_APPACTIVATE = "- Another incompatible extension is active. Please disable the other extensions and restart gnome-shell"
+    _PROBLEM_STATIC_WORKSPACES = `- The option "Static Workspaces" is not active`
+    _PROBLEM_SPAN_DISPLAYS = `- The option "Workspaces span displays" is not active`
+
+    getProblems() {
+        let list = []
+        if (! this._appActivateHasRightImplementation ) {
+            list.push(this._PROBLEM_APPACTIVATE);
+        }
+        if (!this._staticWorkspaces) {
+            list.push(this._PROBLEM_STATIC_WORKSPACES);
+        }
+        if (!this._spanDisplays) {
+            list.push(this._PROBLEM_SPAN_DISPLAYS)
+        }
+        return `Switch workspaces on active monitor can't work properly, because of the following issues:\n\n${list.join("\n")}`
     }
 
     toString() {
@@ -206,6 +273,7 @@ class ConfigurationService {
 
 function onWorkspaceChanged() {
     configurationService.conditionallyEnableAutomaticSwitching()
+    configurationService.eventuallyShowWarningMenu()
     workspaceService.switchToPreviouslyActiveWorkspaceOnInactiveMonitors();
 }
 
@@ -232,6 +300,8 @@ let workSpaceChangedListener;
 
 function enable() {
     configurationService = new ConfigurationService();
+    configurationService.eventuallyShowWarningMenu()
+
     workspaceService = new WorkSpacesService(configurationService);
     controller = new Controller(workspaceService);
 
@@ -251,6 +321,8 @@ function enable() {
     addKeybinding();
     configurationService.conditionallyEnableAutomaticSwitching();
     maybeLog("enabled")
+
+
 }
 
 function disable() {
@@ -269,6 +341,8 @@ function disable() {
         maybeLog("restoring the original implementation of Shell.App.activate")
         Shell.App.prototype.activate = originalAppActivate
     }
+
+    configurationService.eventuallyDestroyWarningMenu();
 
     controller = null;
     workspaceService = null;
@@ -309,3 +383,6 @@ function maybeLog(value) {
         log(value);
     }
 }
+
+
+
