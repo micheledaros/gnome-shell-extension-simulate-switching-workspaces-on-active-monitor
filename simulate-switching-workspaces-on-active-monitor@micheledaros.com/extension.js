@@ -185,8 +185,8 @@ class ConfigurationService {
 
     conditionallyEnableAutomaticSwitching() {
         this._appActivateHasRightImplementation = Shell.App.prototype.activate == overridenAppActivate
-        this._staticWorkspaces = true
-        this._spanDisplays = true
+        this._staticWorkspaces = !Meta.prefs_get_dynamic_workspaces()
+        this._spanDisplays = !Meta.prefs_get_workspaces_only_on_primary()
         maybeLog(this.toString())
     }
 
@@ -205,6 +205,7 @@ class ConfigurationService {
 }
 
 function onWorkspaceChanged() {
+    configurationService.conditionallyEnableAutomaticSwitching()
     workspaceService.switchToPreviouslyActiveWorkspaceOnInactiveMonitors();
 }
 
@@ -216,7 +217,9 @@ function onExtensionStateChanged(extension, state) {
 function overridenAppActivate() {
     maybeLog(`overridden App::activate`)
     let activeWindows = this.get_windows();
-    workspaceService.windowActivatedWithFocus(activeWindows[0]);
+    if (activeWindows && activeWindows[0]) {
+        workspaceService.windowActivatedWithFocus(activeWindows[0]);
+    }
     return originalAppActivate.call(this);
 }
 
@@ -225,7 +228,7 @@ let workspaceService;
 let configurationService;
 let originalAppActivate
 let workSpaceChangedListener;
-let extensionStateChangedListener;
+// let extensionStateChangedListener;
 
 function enable() {
     configurationService = new ConfigurationService();
@@ -240,14 +243,14 @@ function enable() {
         onWorkspaceChanged
     );
 
-    extensionStateChangedListener = Main.extensionManager.connect(
-        "extension-state-changed",
-        onExtensionStateChanged
-    );
+    // extensionStateChangedListener = Main.extensionManager.connect(
+    //     "extension-state-changed",
+    //     onExtensionStateChanged
+    // );
 
     addKeybinding();
     configurationService.conditionallyEnableAutomaticSwitching();
-
+    maybeLog("enabled")
 }
 
 function disable() {
@@ -257,9 +260,9 @@ function disable() {
         global.workspace_manager.disconnect(workSpaceChangedListener);
     }
 
-    if (extensionStateChangedListener) {
-        global.workspace_manager.disconnect(extensionStateChangedListener);
-    }
+    // if (extensionStateChangedListener) {
+    //     global.workspace_manager.disconnect(extensionStateChangedListener);
+    // }
 
     if (originalAppActivate) {
         Shell.App.prototype.activate = originalAppActivate
@@ -270,7 +273,8 @@ function disable() {
     configurationService = null;
     originalAppActivate = null
     workSpaceChangedListener = null;
-    extensionStateChangedListener = null;
+    //extensionStateChangedListener = null;
+    maybeLog("disabled")
 }
 
 function addKeybinding() {
