@@ -10,7 +10,7 @@ const HOTKEY_PREVIOUS = "switch-to-previous-workspace-on-active-monitor";
 
 const UP = -1;
 const DOWN = 1;
-const DEBUG_ACTIVE = true;
+const DEBUG_ACTIVE = false;
 
 class WindowWrapper {
     constructor(windowActor) {
