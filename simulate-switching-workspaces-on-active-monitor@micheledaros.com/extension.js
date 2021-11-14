@@ -3,8 +3,7 @@ const Shell = imports.gi.Shell;
 const Main = imports.ui.main;
 const ExtensionUtils = imports.misc.extensionUtils;
 
-const SCHEMA =
-    "org.gnome.shell.extensions.simulate-switching-workspaces-on-active-monitor";
+const SCHEMA = "org.gnome.shell.extensions.simulate-switching-workspaces-on-active-monitor";
 const HOTKEY_NEXT = "switch-to-next-workspace-on-active-monitor";
 const HOTKEY_PREVIOUS = "switch-to-previous-workspace-on-active-monitor";
 
@@ -203,19 +202,19 @@ class ConfigurationService {
 }
 
 function onWorkspaceChanged() {
-  workspaceService.switchToPreviouslyActiveWorkspaceOnInactiveMonitors();
+    workspaceService.switchToPreviouslyActiveWorkspaceOnInactiveMonitors();
 }
 
 function onExtensionStateChanged(extension, state) {
-  maybeLog(`an extension state changed ${extension.uid}, ${state.state}`)
-  configurationService.conditionallyEnableAutomaticSwitching();
+    maybeLog(`an extension state changed ${extension.uid}, ${state.state}`)
+    configurationService.conditionallyEnableAutomaticSwitching();
 }
 
 function overridenAppActivate() {
-  maybeLog(`overridden App::activate`)
-  let activeWindows = this.get_windows();
-  workspaceService.windowActivatedWithFocus(activeWindows[0]);
-  return originalAppActivate.call(this);
+    maybeLog(`overridden App::activate`)
+    let activeWindows = this.get_windows();
+    workspaceService.windowActivatedWithFocus(activeWindows[0]);
+    return originalAppActivate.call(this);
 }
 
 let controller;
@@ -226,49 +225,49 @@ let workSpaceChangedListener;
 let extensionStateChangedListener;
 
 function enable() {
-  configurationService = new ConfigurationService();
-  workspaceService = new WorkSpacesService(configurationService);
-  controller = new Controller(workspaceService);
+    configurationService = new ConfigurationService();
+    workspaceService = new WorkSpacesService(configurationService);
+    controller = new Controller(workspaceService);
 
-  originalAppActivate = Shell.App.prototype.activate;
-  Shell.App.prototype.activate = overridenAppActivate
+    originalAppActivate = Shell.App.prototype.activate;
+    Shell.App.prototype.activate = overridenAppActivate
 
-  workSpaceChangedListener = global.workspace_manager.connect(
-      "active-workspace-changed",
-      onWorkspaceChanged
-  );
+    workSpaceChangedListener = global.workspace_manager.connect(
+        "active-workspace-changed",
+        onWorkspaceChanged
+    );
 
-  extensionStateChangedListener = Main.extensionManager.connect(
-      "extension-state-changed",
-      onExtensionStateChanged
-  );
+    extensionStateChangedListener = Main.extensionManager.connect(
+        "extension-state-changed",
+        onExtensionStateChanged
+    );
 
-  addKeybinding();
-  configurationService.conditionallyEnableAutomaticSwitching();
+    addKeybinding();
+    configurationService.conditionallyEnableAutomaticSwitching();
 
 }
 
 function disable() {
-  removeKeybinding();
+    removeKeybinding();
 
-  if (workSpaceChangedListener) {
-    global.workspace_manager.disconnect(workSpaceChangedListener);
-  }
+    if (workSpaceChangedListener) {
+        global.workspace_manager.disconnect(workSpaceChangedListener);
+    }
 
-  if (extensionStateChangedListener) {
-    global.workspace_manager.disconnect(extensionStateChangedListener);
-  }
+    if (extensionStateChangedListener) {
+        global.workspace_manager.disconnect(extensionStateChangedListener);
+    }
 
-  if (originalAppActivate) {
-    Shell.App.prototype.activate = originalAppActivate
-  }
+    if (originalAppActivate) {
+        Shell.App.prototype.activate = originalAppActivate
+    }
 
-  controller = null;
-  workspaceService = null;
-  configurationService = null;
-  originalAppActivate = null
-  workSpaceChangedListener = null;
-  extensionStateChangedListener = null;
+    controller = null;
+    workspaceService = null;
+    configurationService = null;
+    originalAppActivate = null
+    workSpaceChangedListener = null;
+    extensionStateChangedListener = null;
 }
 
 function addKeybinding() {
