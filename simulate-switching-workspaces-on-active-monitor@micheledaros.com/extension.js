@@ -217,7 +217,7 @@ function onExtensionStateChanged(extension, state) {
 function overridenAppActivate() {
     maybeLog(`overridden App::activate`)
     let activeWindows = this.get_windows();
-    if (activeWindows && activeWindows[0]) {
+    if (workspaceService && activeWindows && activeWindows[0]) {
         workspaceService.windowActivatedWithFocus(activeWindows[0]);
     }
     return originalAppActivate.call(this);
@@ -264,7 +264,9 @@ function disable() {
     //     global.workspace_manager.disconnect(extensionStateChangedListener);
     // }
 
-    if (originalAppActivate) {
+    //don't restore the prototype, if it has been overridden in another extension
+    if (Shell.App.prototype.activate === overridenAppActivate) {
+        maybeLog("restoring the original implementation of Shell.App.activate")
         Shell.App.prototype.activate = originalAppActivate
     }
 
