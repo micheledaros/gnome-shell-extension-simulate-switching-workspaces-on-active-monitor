@@ -91,9 +91,11 @@ class WorkSpacesService {
   }
 
   windowActivatedWithFocus(window) {
-    let monitor = window.get_monitor();
-    log(`next active monitor will be ${monitor}`)
-    this._monitorActivatedWithFocus = monitor;
+    if (window.get_workspace().index() != global.workspace_manager.get_active_workspace_index()) {
+      let monitor = window.get_monitor();
+      log(`next active monitor will be ${monitor}`)
+      this._monitorActivatedWithFocus = monitor;
+    }
   }
 
   switchToPreviouslyActiveWorkspaceOnInactiveMonitors() {
@@ -252,6 +254,7 @@ let workSpaceChangedListener;
 let originalActivateWithFocus
 let originalActivate
 let originalActivateWithWorkspace
+let originalAppActivate
 
 function onWorkspaceChanged() {
   workspaceService.switchToPreviouslyActiveWorkspaceOnInactiveMonitors();
@@ -283,7 +286,18 @@ function myActivateWithWorkspace (arg1, arg2) {
   return originalActivateWithWorkspace.call(this, arg1, arg2);
 }
 
+function appActivate (arg1, arg2, arg3) {
+  log("OVERRIDDEN APP ACTIVATE")
+  let activeWindows = this.get_windows() ;
+  workspaceService.windowActivatedWithFocus(activeWindows[0]);
+  return originalAppActivate.call(this);
+
+}
+
 function enable() {
+
+  originalAppActivate =  Shell.App.prototype.activate;
+  Shell.App.prototype.activate = appActivate
 
   originalActivateWithFocus = Meta.Workspace.prototype.activate_with_focus;
   Meta.Workspace.prototype.activate_with_focus = activateWithFocus
@@ -307,10 +321,6 @@ function enable() {
     onExtensionStateChanged
   );
 
-  extensionStateChangedListener = Main.Window.connect(
-      "raised",
-      raised
-  );
 
 
 
@@ -332,6 +342,10 @@ function disable() {
 
   if (originalActivateWithFocus) {
     Meta.Workspace.prototype.activate_with_focus = originalActivateWithFocus
+  }
+
+  if (originalActivate) {
+    Shell.App.prototype.activate = originalActivate
   }
 
   workSpaceChangedListener = null;
