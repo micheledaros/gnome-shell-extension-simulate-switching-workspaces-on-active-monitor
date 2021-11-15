@@ -1,18 +1,18 @@
 # gnome-shell-extension-simulate-switching-workspaces-on-active-monitor
 
-Simulates switching workspaces on the active monitor.
+(almost) allows to have separate workspaces on multiple monitors
 
 #### Details 
 
-The extension does not actually switch workspaces, 
-but moves all the windows on the active monitor to the next screen 
+After you switch to a different workspace(by using the preview, or by selecting an app on the dock), the windows on the monitors that don't have the focus are moved to the visible workspace.  
+So it looks like you are switching workspaces only on the active monitor, leaving the others unchanged.
 
 ![Alt text](screenshot.png?raw=true "Screenshot")
 
 #### Prerequisites
 
 * The option "Workspaces span displays"  from tweaks must be active.
-* It works best with the Static Workspaces option active.
+* The option "Static Workspaces" must be active.
 
 #### Hot keys
 
@@ -24,6 +24,7 @@ but moves all the windows on the active monitor to the next screen
 
 * ```make install```
 * restart gnome shell
+
 
 
 
