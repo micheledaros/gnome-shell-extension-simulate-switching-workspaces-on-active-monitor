@@ -180,6 +180,7 @@ class ConfigurationService {
 
     constructor() {
         this._appActivateHasRightImplementation = false;
+        this._activateWindowHasRightImplementation = false;
         this._staticWorkspaces = false
         this._spanDisplays = false
         this._warningMenu = null
@@ -189,6 +190,7 @@ class ConfigurationService {
 
     conditionallyEnableAutomaticSwitching() {
         this._appActivateHasRightImplementation = Shell.App.prototype.activate == overridenAppActivate
+        this._activateWindowHasRightImplementation = Main.activateWindow == overridenActivateWindow
         this._staticWorkspaces = !Meta.prefs_get_dynamic_workspaces()
         this._spanDisplays = !Meta.prefs_get_workspaces_only_on_primary()
         maybeLog(this.toString())
@@ -196,7 +198,7 @@ class ConfigurationService {
 
 
     automaticSwitchingIsEnabled() {
-        return this._appActivateHasRightImplementation && this._staticWorkspaces && this._spanDisplays
+        return this._appActivateHasRightImplementation && this._activateWindowHasRightImplementation && this._staticWorkspaces && this._spanDisplays
     }
 
     eventuallyShowWarningMenu() {
@@ -249,7 +251,7 @@ class ConfigurationService {
 
     getProblems() {
         let list = []
-        if (! this._appActivateHasRightImplementation ) {
+        if (! (this._appActivateHasRightImplementation && this._activateWindowHasRightImplementation)) {
             list.push(this._PROBLEM_APPACTIVATE);
         }
         if (!this._staticWorkspaces) {
@@ -265,6 +267,7 @@ class ConfigurationService {
         return `
                 automaticSwitchingIsEnabled: ${this.automaticSwitchingIsEnabled()} 
                 appActivateHasRightImplementation: ${this._appActivateHasRightImplementation} 
+                activateWindowHasRightImplementation: ${this._activateWindowHasRightImplementation} 
                 staticWorkspaces: ${this._staticWorkspaces}
                 spanDisplays: ${this._spanDisplays}
                 `
@@ -291,22 +294,41 @@ function overridenAppActivate() {
     return originalAppActivate.call(this);
 }
 
+function overridenActivateWindow(window) {
+    maybeLog(`overridden Main::activateWindow`)
+
+    if (workspaceService && window) {
+        workspaceService.windowActivatedWithFocus(window);
+    }
+    return originalActivateWindow.call(this, window);
+}
+
+
+
 let controller;
 let workspaceService;
 let configurationService;
 let originalAppActivate
+let originalActivateWindow
 let workSpaceChangedListener;
 // let extensionStateChangedListener;
 
 function enable() {
+    originalAppActivate = Shell.App.prototype.activate;
+    Shell.App.prototype.activate = overridenAppActivate
+
+    originalActivateWindow = Main.activateWindow;
+    Main.activateWindow = overridenActivateWindow
+
+
     configurationService = new ConfigurationService();
+    configurationService.conditionallyEnableAutomaticSwitching()
     configurationService.eventuallyShowWarningMenu()
 
     workspaceService = new WorkSpacesService(configurationService);
     controller = new Controller(workspaceService);
 
-    originalAppActivate = Shell.App.prototype.activate;
-    Shell.App.prototype.activate = overridenAppActivate
+
 
     workSpaceChangedListener = global.workspace_manager.connect(
         "active-workspace-changed",
@@ -340,6 +362,11 @@ function disable() {
     if (Shell.App.prototype.activate === overridenAppActivate) {
         maybeLog("restoring the original implementation of Shell.App.activate")
         Shell.App.prototype.activate = originalAppActivate
+    }
+
+    if (Main.activateWindow === overridenActivateWindow) {
+        maybeLog("restoring the original implementation of Main.activateWindow")
+        Main.activateWindow = originalActivateWindow
     }
 
     configurationService.eventuallyDestroyWarningMenu();
