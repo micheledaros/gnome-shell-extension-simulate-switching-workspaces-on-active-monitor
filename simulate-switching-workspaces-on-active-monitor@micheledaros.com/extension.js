@@ -186,6 +186,11 @@ class ConfigurationService {
         this._warningMenu = null
         this.warningItem = null
         this._warningMenuText = null
+
+        this._PROBLEM_APPACTIVATE = "- Another incompatible extension is active. Please disable the other extensions and restart gnome-shell"
+        this._PROBLEM_STATIC_WORKSPACES = `- The option "Static Workspaces" is not active`
+        this._PROBLEM_SPAN_DISPLAYS = `- The option "Workspaces span displays" is not active`
+
     }
 
     conditionallyEnableAutomaticSwitching() {
@@ -245,9 +250,7 @@ class ConfigurationService {
         }
     }
 
-    _PROBLEM_APPACTIVATE = "- Another incompatible extension is active. Please disable the other extensions and restart gnome-shell"
-    _PROBLEM_STATIC_WORKSPACES = `- The option "Static Workspaces" is not active`
-    _PROBLEM_SPAN_DISPLAYS = `- The option "Workspaces span displays" is not active`
+
 
     getProblems() {
         let list = []
