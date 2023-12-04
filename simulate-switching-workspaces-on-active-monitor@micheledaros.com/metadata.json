@@ -2,7 +2,7 @@
   "description": "Simulates switching the workspace on the active monitor only. Ctrl+Alt+q switches to the previous workspace, Ctrl+Alt+a switches to the next",
   "name": "Switch workspaces on active monitor",
   "original-authors": "darosmic@gmail.com",
-  "shell-version": ["3.36", "3.38", "40", "41", "42", "43", "44"],
+  "shell-version": ["3.36", "3.38", "40", "41", "42", "43", "44", "45"],
   "url": "https://github.com/micheledaros/gnome-shell-extension-simulate-switching-workspaces-on-active-monitor",
   "uuid": "simulate-switching-workspaces-on-active-monitor@micheledaros.com",
   "settings-schema": "org.gnome.shell.extensions.simulate-switching-workspaces-on-active-monitor",
