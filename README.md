@@ -26,5 +26,8 @@ So it looks like you are switching workspaces only on the active monitor, leavin
 * restart gnome shell
 
 
+## GNOME 45 notes
 
-
+Some of the APIs required for this extension are now gone.
+Because of this, the extension can no longer easily know what is the currently focused window,
+and now assumes your mouse pointer is on the monitor you want to switch.
