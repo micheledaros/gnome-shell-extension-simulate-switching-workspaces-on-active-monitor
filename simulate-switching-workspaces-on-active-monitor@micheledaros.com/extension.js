@@ -1,10 +1,13 @@
-const { Clutter, Shell, St, Meta } = imports.gi;
-const Main = imports.ui.main;
-const ExtensionUtils = imports.misc.extensionUtils;
-const PanelMenu = imports.ui.panelMenu;
-const PopupMenu = imports.ui.popupMenu;
+import Clutter from "gi://Clutter";
+import Shell from "gi://Shell";
+import St from "gi://St";
+import Meta from "gi://Meta";
 
-const SCHEMA = "org.gnome.shell.extensions.simulate-switching-workspaces-on-active-monitor";
+import * as Main from "resource:///org/gnome/shell/ui/main.js";
+import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
+import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
+import {Extension} from "resource:///org/gnome/shell/extensions/extension.js";
+
 const HOTKEY_NEXT = "switch-to-next-workspace-on-active-monitor";
 const HOTKEY_PREVIOUS = "switch-to-previous-workspace-on-active-monitor";
 
@@ -58,15 +61,6 @@ class WorkSpacesService {
         this._initNWorskpaces();
         this._activeWorkspaceIndex =
             this._getActiveWorkspaceIndex();
-        this._monitorActivatedWithFocus = null;
-    }
-
-    windowActivatedWithFocus(window) {
-        if (window.get_workspace().index() != this._getActiveWorkspaceIndex()) {
-            let monitor = window.get_monitor();
-            maybeLog(`next active monitor will be ${monitor}`)
-            this._monitorActivatedWithFocus = monitor;
-        }
     }
 
     switchToPreviouslyActiveWorkspaceOnInactiveMonitors() {
@@ -87,11 +81,7 @@ class WorkSpacesService {
                 : this._activeWorkspaceIndex - nextWorkspace;
         const shift = direction * diff;
 
-        const focusedMonitorIndex = this._monitorActivatedWithFocus != null
-            ? this._monitorActivatedWithFocus
-            : this._getFocusedMonitor();
-
-        this._monitorActivatedWithFocus = null
+        const focusedMonitorIndex = this._getFocusedMonitor();
 
         this._activeWorkspaceIndex = nextWorkspace;
 
@@ -142,7 +132,16 @@ class WorkSpacesService {
     }
 
     _getFocusedMonitor() {
-        return global.display.get_current_monitor();
+        // TODO: fix compatibility with Gnome 45 (see README.md)
+        // The missing API is being unable to override Main.activateWindow. 
+        // As far as I understand it was used as follows:
+        // - Have a window 1 on monitor 1 and a window 2 on monitor 2
+        // - Focus window 1, mouse pointer within it
+        // - Alt tab into window 2, mouse pointer remaining within windows 1
+        // - Now get_current_monitor returns monitor 1, despite the focus being within monitor 2. Before the update, activateWindow would override it.
+        let currentMonitor = global.display.get_current_monitor();
+        maybeLog(` focus is currently on monitor ${currentMonitor} `);
+        return currentMonitor;
     }
 
     _initNWorskpaces() {
@@ -157,14 +156,15 @@ class WorkSpacesService {
     }
 
     _getActiveWorkspaceIndex() {
+    
         return global.workspace_manager.get_active_workspace_index();
     }
 }
 
 class Controller {
-    constructor(workspaceService) {
+    constructor(workspaceService, settings) {
         this._workspaceService = workspaceService;
-        this._gsettings = ExtensionUtils.getSettings();
+        this._gsettings = settings;
     }
 
     up() {
@@ -194,8 +194,6 @@ class ConfigurationService {
     }
 
     conditionallyEnableAutomaticSwitching() {
-        this._appActivateHasRightImplementation = Shell.App.prototype.activate == overridenAppActivate
-        this._activateWindowHasRightImplementation = Main.activateWindow == overridenActivateWindow
         this._staticWorkspaces = !Meta.prefs_get_dynamic_workspaces()
         this._spanDisplays = !Meta.prefs_get_workspaces_only_on_primary()
         maybeLog(this.toString())
@@ -203,7 +201,7 @@ class ConfigurationService {
 
 
     automaticSwitchingIsEnabled() {
-        return this._appActivateHasRightImplementation && this._activateWindowHasRightImplementation && this._staticWorkspaces && this._spanDisplays
+        return this._staticWorkspaces && this._spanDisplays
     }
 
     eventuallyShowWarningMenu() {
@@ -237,7 +235,7 @@ class ConfigurationService {
             this._warningMenu.add_child(warningSymbol);
             this._warningMenu.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
             this._warningItem = new PopupMenu.PopupMenuItem(
-                "just a placehoder text"
+                "just a placeholder text"
             );
             this._warningMenu.menu.addMenuItem(this._warningItem)
             maybeLog("adding the warning menu to the status area")
@@ -283,53 +281,19 @@ function onWorkspaceChanged() {
     workspaceService.switchToPreviouslyActiveWorkspaceOnInactiveMonitors();
 }
 
-function onExtensionStateChanged(extension, state) {
-    maybeLog(`an extension state changed ${extension.uid}, ${state.state}`)
-    configurationService.conditionallyEnableAutomaticSwitching();
-}
-
-function overridenAppActivate() {
-    maybeLog(`overridden App::activate`)
-    let activeWindows = this.get_windows();
-    if (workspaceService && activeWindows && activeWindows[0]) {
-        workspaceService.windowActivatedWithFocus(activeWindows[0]);
-    }
-    return originalAppActivate.call(this);
-}
-
-function overridenActivateWindow(window) {
-    maybeLog(`overridden Main::activateWindow`)
-
-    if (workspaceService && window) {
-        workspaceService.windowActivatedWithFocus(window);
-    }
-    return originalActivateWindow.call(this, window);
-}
-
-
-
 let controller;
 let workspaceService;
 let configurationService;
-let originalAppActivate
-let originalActivateWindow
 let workSpaceChangedListener;
 // let extensionStateChangedListener;
 
-function enable() {
-    originalAppActivate = Shell.App.prototype.activate;
-    Shell.App.prototype.activate = overridenAppActivate
-
-    originalActivateWindow = Main.activateWindow;
-    Main.activateWindow = overridenActivateWindow
-
-
+function enable(settings) {
     configurationService = new ConfigurationService();
     configurationService.conditionallyEnableAutomaticSwitching()
     configurationService.eventuallyShowWarningMenu()
 
     workspaceService = new WorkSpacesService(configurationService);
-    controller = new Controller(workspaceService);
+    controller = new Controller(workspaceService, settings);
 
 
 
@@ -338,16 +302,9 @@ function enable() {
         onWorkspaceChanged
     );
 
-    // extensionStateChangedListener = Main.extensionManager.connect(
-    //     "extension-state-changed",
-    //     onExtensionStateChanged
-    // );
-
     addKeybinding();
     configurationService.conditionallyEnableAutomaticSwitching();
     maybeLog("enabled")
-
-
 }
 
 function disable() {
@@ -357,29 +314,12 @@ function disable() {
         global.workspace_manager.disconnect(workSpaceChangedListener);
     }
 
-    // if (extensionStateChangedListener) {
-    //     global.workspace_manager.disconnect(extensionStateChangedListener);
-    // }
-
-    //don't restore the prototype, if it has been overridden in another extension
-    if (Shell.App.prototype.activate === overridenAppActivate) {
-        maybeLog("restoring the original implementation of Shell.App.activate")
-        Shell.App.prototype.activate = originalAppActivate
-    }
-
-    if (Main.activateWindow === overridenActivateWindow) {
-        maybeLog("restoring the original implementation of Main.activateWindow")
-        Main.activateWindow = originalActivateWindow
-    }
-
     configurationService.eventuallyDestroyWarningMenu();
 
     controller = null;
     workspaceService = null;
     configurationService = null;
-    originalAppActivate = null
     workSpaceChangedListener = null;
-    //extensionStateChangedListener = null;
     maybeLog("disabled")
 }
 
@@ -410,9 +350,17 @@ function removeKeybinding() {
 
 function maybeLog(value) {
     if (DEBUG_ACTIVE) {
-        log(value);
+        console.log(value);
     }
 }
 
+export default class SwitchWorkspacesExtension extends Extension {
+    enable() {
+        enable(this.getSettings());
+    }
 
+    disable() {
+        disable();
+    }
+}
 
