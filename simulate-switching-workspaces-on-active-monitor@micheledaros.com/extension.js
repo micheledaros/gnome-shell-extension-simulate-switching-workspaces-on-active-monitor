@@ -8,7 +8,6 @@ import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
 import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
 import {Extension} from "resource:///org/gnome/shell/extensions/extension.js";
 
-const SCHEMA = "org.gnome.shell.extensions.simulate-switching-workspaces-on-active-monitor";
 const HOTKEY_NEXT = "switch-to-next-workspace-on-active-monitor";
 const HOTKEY_PREVIOUS = "switch-to-previous-workspace-on-active-monitor";
 
@@ -133,12 +132,16 @@ class WorkSpacesService {
     }
 
     _getFocusedMonitor() {
-        // Note: should incorporate this somehow
-        // The problem is when you change the workspace once,
-        // the focus window is now gone, and it may then find a focus window on the other workspace
-        // and start changing that. not sure how to work around this.
-        // global.display.focus_window.get_monitor()
-        return global.display.get_current_monitor();
+        // TODO: fix compatibility with Gnome 45 (see README.md)
+        // The missing API is being unable to override Main.activateWindow. 
+        // As far as I understand it was used as follows:
+        // - Have a window 1 on monitor 1 and a window 2 on monitor 2
+        // - Focus window 1, mouse pointer within it
+        // - Alt tab into window 2, mouse pointer remaining within windows 1
+        // - Now get_current_monitor returns monitor 1, despite the focus being within monitor 2. Before the update, activateWindow would override it.
+        let currentMonitor = global.display.get_current_monitor();
+        maybeLog(` focus is currently on monitor ${currentMonitor} `);
+        return currentMonitor;
     }
 
     _initNWorskpaces() {
@@ -153,6 +156,7 @@ class WorkSpacesService {
     }
 
     _getActiveWorkspaceIndex() {
+    
         return global.workspace_manager.get_active_workspace_index();
     }
 }
@@ -231,7 +235,7 @@ class ConfigurationService {
             this._warningMenu.add_child(warningSymbol);
             this._warningMenu.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
             this._warningItem = new PopupMenu.PopupMenuItem(
-                "just a placehoder text"
+                "just a placeholder text"
             );
             this._warningMenu.menu.addMenuItem(this._warningItem)
             maybeLog("adding the warning menu to the status area")
@@ -280,7 +284,6 @@ function onWorkspaceChanged() {
 let controller;
 let workspaceService;
 let configurationService;
-let originalAppActivate
 let workSpaceChangedListener;
 // let extensionStateChangedListener;
 
@@ -316,9 +319,7 @@ function disable() {
     controller = null;
     workspaceService = null;
     configurationService = null;
-    originalAppActivate = null
     workSpaceChangedListener = null;
-    //extensionStateChangedListener = null;
     maybeLog("disabled")
 }
 
@@ -349,7 +350,7 @@ function removeKeybinding() {
 
 function maybeLog(value) {
     if (DEBUG_ACTIVE) {
-        log(value);
+        console.log(value);
     }
 }
 
