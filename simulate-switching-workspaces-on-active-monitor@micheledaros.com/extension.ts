@@ -262,7 +262,7 @@ class ConfigurationService {
                 y_align: Clutter.ActorAlign.CENTER,
             });
             this._warningMenu.add_child(warningSymbol);
-            if (!(this._warningMenu.menu instanceof PopupMenu.PopupDummyMenu)) {
+            if (this._warningMenu.menu instanceof PopupMenu.PopupMenu) {
                 this._warningMenu.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
                 this._warningItem = new PopupMenu.PopupMenuItem("just a placeholder text");
                 this._warningMenu.menu.addMenuItem(this._warningItem);
@@ -272,7 +272,7 @@ class ConfigurationService {
         }
         let text = this.getProblems();
         if (text !== this._warningMenuText) {
-            this._warningItem!.label.set_text(text);
+            this._warningItem!.label.set_text(text); // TODO: check if `_warningItem` is not null instead of suppressing it
             this._warningMenuText = text;
         }
     }
@@ -302,63 +302,6 @@ class ConfigurationService {
     }
 }
 
-function onWorkspaceChanged(): void {
-    configurationService!.conditionallyEnableAutomaticSwitching();
-    configurationService!.eventuallyShowWarningMenu();
-    workspaceService!.switchToPreviouslyActiveWorkspaceOnInactiveMonitors();
-}
-
-let controller: Controller | null = null;
-let workspaceService: WorkSpacesService | null = null;
-let configurationService: ConfigurationService | null = null;
-let workSpaceChangedListener: number | null = null;
-
-// let extensionStateChangedListener;
-
-function enable(settings: Gio.Settings): void {
-    configurationService = new ConfigurationService();
-    configurationService.conditionallyEnableAutomaticSwitching();
-    configurationService.eventuallyShowWarningMenu();
-
-    workspaceService = new WorkSpacesService(configurationService);
-    controller = new Controller(workspaceService, settings);
-
-    workSpaceChangedListener = global.workspace_manager.connect("active-workspace-changed", onWorkspaceChanged);
-
-    addKeybinding();
-    configurationService.conditionallyEnableAutomaticSwitching();
-    maybeLog("enabled");
-}
-
-function disable(): void {
-    removeKeybinding();
-
-    if (workSpaceChangedListener) {
-        global.workspace_manager.disconnect(workSpaceChangedListener);
-    }
-
-    configurationService!.eventuallyDestroyWarningMenu();
-
-    controller = null;
-    workspaceService = null;
-    configurationService = null;
-    workSpaceChangedListener = null;
-    maybeLog("disabled");
-}
-
-function addKeybinding(): void {
-    let modeType = Shell.ActionMode.ALL;
-
-    Main.wm.addKeybinding(HOTKEY_NEXT, controller!.getGSettings(), Meta.KeyBindingFlags.NONE, modeType, controller!.up.bind(controller));
-
-    Main.wm.addKeybinding(HOTKEY_PREVIOUS, controller!.getGSettings(), Meta.KeyBindingFlags.NONE, modeType, controller!.down.bind(controller));
-}
-
-function removeKeybinding(): void {
-    Main.wm.removeKeybinding(HOTKEY_NEXT);
-    Main.wm.removeKeybinding(HOTKEY_PREVIOUS);
-}
-
 function maybeLog(value: string): void {
     if (DEBUG_ACTIVE) {
         console.log(value);
@@ -366,11 +309,69 @@ function maybeLog(value: string): void {
 }
 
 export default class SwitchWorkspacesExtension extends Extension {
+    private state: {
+        controller: Controller,
+        workspaceService: WorkSpacesService,
+        configurationService: ConfigurationService,
+        workSpaceChangedListener: number,
+    } | null = null;
+
     enable(): void {
-        enable(this.getSettings());
+        if (this.state !== null) {
+            return;
+        }
+
+        let configurationService = new ConfigurationService();
+        configurationService.conditionallyEnableAutomaticSwitching();
+        configurationService.eventuallyShowWarningMenu();
+
+        let workspaceService = new WorkSpacesService(configurationService);
+        let controller = new Controller(workspaceService, this.getSettings());
+
+        let workSpaceChangedListener = global.workspace_manager.connect("active-workspace-changed", () => {
+            configurationService.conditionallyEnableAutomaticSwitching();
+            configurationService.eventuallyShowWarningMenu();
+            workspaceService.switchToPreviouslyActiveWorkspaceOnInactiveMonitors();
+        });
+
+        this.addKeybinding(controller);
+        configurationService.conditionallyEnableAutomaticSwitching();
+
+        this.state = {
+            controller,
+            workspaceService,
+            configurationService,
+            workSpaceChangedListener,
+        };
+
+        maybeLog("enabled");
     }
 
     disable(): void {
-        disable();
+        if (this.state === null) {
+            return;
+        }
+
+        this.removeKeybinding();
+
+        global.workspace_manager.disconnect(this.state.workSpaceChangedListener);
+
+        this.state.configurationService.eventuallyDestroyWarningMenu();
+
+        this.state = null;
+        maybeLog("disabled");
+    }
+
+    addKeybinding(controller: Controller): void {
+        let modeType = Shell.ActionMode.ALL;
+
+        Main.wm.addKeybinding(HOTKEY_NEXT, controller.getGSettings(), Meta.KeyBindingFlags.NONE, modeType, controller.up.bind(controller));
+
+        Main.wm.addKeybinding(HOTKEY_PREVIOUS, controller.getGSettings(), Meta.KeyBindingFlags.NONE, modeType, controller.down.bind(controller));
+    }
+
+    removeKeybinding(): void {
+        Main.wm.removeKeybinding(HOTKEY_NEXT);
+        Main.wm.removeKeybinding(HOTKEY_PREVIOUS);
     }
 }
