@@ -70,34 +70,34 @@ class WindowWrapper {
 }
 
 class WorkSpacesService {
-    private _configurationService: ConfigurationService;
-    private _activeWorkspaceIndex: number;
-    private _nWorkspaces!: number;
+    private configurationService: ConfigurationService;
+    private activeWorkspaceIndex: number;
+    private nWorkspaces!: number;
 
     constructor(_configurationService: ConfigurationService) {
-        this._configurationService = _configurationService;
-        this._initNWorkspaces();
-        this._activeWorkspaceIndex = this._getActiveWorkspaceIndex();
+        this.configurationService = _configurationService;
+        this.initNWorkspaces();
+        this.activeWorkspaceIndex = this.getActiveWorkspaceIndex();
     }
 
     switchToPreviouslyActiveWorkspaceOnInactiveMonitors(): void {
-        if (!this._configurationService.automaticSwitchingIsEnabled()) {
+        if (!this.configurationService.automaticSwitchingIsEnabled()) {
             maybeLog(`not switching to previously active workspace because automaticSwitching is disabled`);
             return;
         }
 
-        this._initNWorkspaces();
+        this.initNWorkspaces();
 
-        const nextWorkspace = this._getActiveWorkspaceIndex();
+        const nextWorkspace = this.getActiveWorkspaceIndex();
 
-        const direction = nextWorkspace > this._activeWorkspaceIndex ? Direction.DOWN : Direction.UP;
+        const direction = nextWorkspace > this.activeWorkspaceIndex ? Direction.DOWN : Direction.UP;
 
-        const diff = nextWorkspace > this._activeWorkspaceIndex ? nextWorkspace - this._activeWorkspaceIndex : this._activeWorkspaceIndex - nextWorkspace;
+        const diff = nextWorkspace > this.activeWorkspaceIndex ? nextWorkspace - this.activeWorkspaceIndex : this.activeWorkspaceIndex - nextWorkspace;
         const shift = direction * diff;
 
-        const focusedMonitorIndex = this._getFocusedMonitor();
+        const focusedMonitorIndex = this.getFocusedMonitor();
 
-        this._activeWorkspaceIndex = nextWorkspace;
+        this.activeWorkspaceIndex = nextWorkspace;
 
         maybeLog(` workspaceChanged
             direction: ${direction}
@@ -105,11 +105,11 @@ class WorkSpacesService {
             activeMonitor: ${focusedMonitorIndex}
         `);
 
-        this._getWindowWrappers()
+        this.getWindowWrappers()
             .filter((it) => it.isNormal())
-            .filter((it) => it.getInitialMonitorIndex() != focusedMonitorIndex)
+            .filter((it) => it.getInitialMonitorIndex() !== focusedMonitorIndex)
             .forEach((it) => {
-                this._moveToDirection(it, shift);
+                this.moveToDirection(it, shift);
             });
 
         maybeLog("switched to previously active workspace on inactive monitors");
@@ -118,16 +118,16 @@ class WorkSpacesService {
     switchWorkspaceOnActiveMonitor(direction: Direction): void {
         maybeLog("begin  switchActiveWorkspace");
 
-        this._initNWorkspaces();
+        this.initNWorkspaces();
 
-        let wrappers = this._getWindowWrappers();
+        let wrappers = this.getWindowWrappers();
 
         maybeLog(`  got ${wrappers.length} windows`);
         wrappers.forEach((it) => {
             maybeLog(it.toString());
         });
 
-        let focusedMonitorIndex = this._getFocusedMonitor();
+        let focusedMonitorIndex = this.getFocusedMonitor();
 
         let windowsToMove = wrappers
             .filter((it) => it.isNormal())
@@ -138,14 +138,14 @@ class WorkSpacesService {
             maybeLog(it.toString());
         });
 
-        windowsToMove.forEach((it) => this._moveToDirection(it, direction));
+        windowsToMove.forEach((it) => this.moveToDirection(it, direction));
     }
 
-    _getWindowWrappers(): WindowWrapper[] {
+    private getWindowWrappers(): WindowWrapper[] {
         return global.get_window_actors().map((x) => new WindowWrapper(x));
     }
 
-    _getFocusedMonitor(): number {
+    private getFocusedMonitor(): number {
         // TODO: fix compatibility with Gnome 45 (see README.md)
         // The missing API is being unable to override Main.activateWindow. 
         // As far as I understand it was used as follows:
@@ -158,52 +158,52 @@ class WorkSpacesService {
         return currentMonitor;
     }
 
-    _initNWorkspaces(): void {
-        this._nWorkspaces = global.workspace_manager.get_n_workspaces();
-        maybeLog(`  workspacesService.nWorkspaces: ${this._nWorkspaces} `);
+    private initNWorkspaces(): void {
+        this.nWorkspaces = global.workspace_manager.get_n_workspaces();
+        maybeLog(`  workspacesService.nWorkspaces: ${this.nWorkspaces} `);
     }
 
-    _moveToDirection(windowWrapper: WindowWrapper, direction: Direction): void {
-        let nextWorkspace = (this._nWorkspaces + windowWrapper.getWorkspaceIndex() + direction) % this._nWorkspaces;
+    private moveToDirection(windowWrapper: WindowWrapper, direction: Direction): void {
+        let nextWorkspace = (this.nWorkspaces + windowWrapper.getWorkspaceIndex() + direction) % this.nWorkspaces;
         maybeLog(`window: ${windowWrapper.getTitle()} will be moved to  workspace will be ${nextWorkspace}`);
         windowWrapper.moveToWorkSpace(nextWorkspace);
     }
 
-    _getActiveWorkspaceIndex(): number {
+    private getActiveWorkspaceIndex(): number {
         return global.workspace_manager.get_active_workspace_index();
     }
 }
 
 class Controller {
-    private _workspaceService: WorkSpacesService;
-    private readonly _gsettings: Gio.Settings;
+    private workspaceService: WorkSpacesService;
+    private readonly gsettings: Gio.Settings;
 
     constructor(workspaceService: WorkSpacesService, settings: Gio.Settings) {
-        this._workspaceService = workspaceService;
-        this._gsettings = settings;
+        this.workspaceService = workspaceService;
+        this.gsettings = settings;
     }
 
     up(): void {
-        this._workspaceService.switchWorkspaceOnActiveMonitor(Direction.UP);
+        this.workspaceService.switchWorkspaceOnActiveMonitor(Direction.UP);
     }
 
     down(): void {
-        this._workspaceService.switchWorkspaceOnActiveMonitor(Direction.DOWN);
+        this.workspaceService.switchWorkspaceOnActiveMonitor(Direction.DOWN);
     }
 
     getGSettings(): Gio.Settings {
-        return this._gsettings;
+        return this.gsettings;
     }
 }
 
 class ConfigurationService {
-    private readonly _appActivateHasRightImplementation: boolean;
-    private readonly _activateWindowHasRightImplementation: boolean;
-    private _staticWorkspaces: boolean;
-    private _spanDisplays: boolean;
-    private readonly _PROBLEM_APPACTIVATE: string;
-    private readonly _PROBLEM_STATIC_WORKSPACES: string;
-    private readonly _PROBLEM_SPAN_DISPLAYS: string;
+    private readonly appActivateHasRightImplementation: boolean;
+    private readonly activateWindowHasRightImplementation: boolean;
+    private staticWorkspaces: boolean;
+    private spanDisplays: boolean;
+    private readonly PROBLEM_APPACTIVATE: string;
+    private readonly PROBLEM_STATIC_WORKSPACES: string;
+    private readonly PROBLEM_SPAN_DISPLAYS: string;
 
     private warningMenu: {
         menu: PanelMenu.Button,
@@ -212,30 +212,30 @@ class ConfigurationService {
     } | null;
 
     constructor() {
-        this._appActivateHasRightImplementation = false;
-        this._activateWindowHasRightImplementation = false;
-        this._staticWorkspaces = false;
-        this._spanDisplays = false;
+        this.appActivateHasRightImplementation = false;
+        this.activateWindowHasRightImplementation = false;
+        this.staticWorkspaces = false;
+        this.spanDisplays = false;
         this.warningMenu = null;
 
-        this._PROBLEM_APPACTIVATE = "- Another incompatible extension is active. Please disable the other extensions and restart gnome-shell";
-        this._PROBLEM_STATIC_WORKSPACES = `- The option "Static Workspaces" is not active`;
-        this._PROBLEM_SPAN_DISPLAYS = `- The option "Workspaces span displays" is not active`;
+        this.PROBLEM_APPACTIVATE = "- Another incompatible extension is active. Please disable the other extensions and restart gnome-shell";
+        this.PROBLEM_STATIC_WORKSPACES = `- The option "Static Workspaces" is not active`;
+        this.PROBLEM_SPAN_DISPLAYS = `- The option "Workspaces span displays" is not active`;
     }
 
     conditionallyEnableAutomaticSwitching(): void {
-        this._staticWorkspaces = !Meta.prefs_get_dynamic_workspaces();
-        this._spanDisplays = !Meta.prefs_get_workspaces_only_on_primary();
+        this.staticWorkspaces = !Meta.prefs_get_dynamic_workspaces();
+        this.spanDisplays = !Meta.prefs_get_workspaces_only_on_primary();
         maybeLog(this.toString());
     }
 
     automaticSwitchingIsEnabled(): boolean {
-        return this._staticWorkspaces && this._spanDisplays;
+        return this.staticWorkspaces && this.spanDisplays;
     }
 
     eventuallyShowWarningMenu(): void {
         if (!this.automaticSwitchingIsEnabled()) {
-            this._showWarningMenu();
+            this.showWarningMenu();
         } else {
             this.eventuallyDestroyWarningMenu();
         }
@@ -250,7 +250,7 @@ class ConfigurationService {
         }
     }
 
-    _showWarningMenu(): void {
+    private showWarningMenu(): void {
         maybeLog("warningMenu should be shown");
         if (this.warningMenu === null) {
             maybeLog("building warning menu");
@@ -290,14 +290,14 @@ class ConfigurationService {
 
     getProblems(): string {
         let list: string[] = [];
-        if (!(this._appActivateHasRightImplementation && this._activateWindowHasRightImplementation)) {
-            list.push(this._PROBLEM_APPACTIVATE);
+        if (!(this.appActivateHasRightImplementation && this.activateWindowHasRightImplementation)) {
+            list.push(this.PROBLEM_APPACTIVATE);
         }
-        if (!this._staticWorkspaces) {
-            list.push(this._PROBLEM_STATIC_WORKSPACES);
+        if (!this.staticWorkspaces) {
+            list.push(this.PROBLEM_STATIC_WORKSPACES);
         }
-        if (!this._spanDisplays) {
-            list.push(this._PROBLEM_SPAN_DISPLAYS);
+        if (!this.spanDisplays) {
+            list.push(this.PROBLEM_SPAN_DISPLAYS);
         }
         return `Switch workspaces on active monitor can't work properly, because of the following issues:\n\n${list.join("\n")}`;
     }
@@ -305,10 +305,10 @@ class ConfigurationService {
     toString(): string {
         return `
                 automaticSwitchingIsEnabled: ${this.automaticSwitchingIsEnabled()} 
-                appActivateHasRightImplementation: ${this._appActivateHasRightImplementation} 
-                activateWindowHasRightImplementation: ${this._activateWindowHasRightImplementation} 
-                staticWorkspaces: ${this._staticWorkspaces}
-                spanDisplays: ${this._spanDisplays}
+                appActivateHasRightImplementation: ${this.appActivateHasRightImplementation} 
+                activateWindowHasRightImplementation: ${this.activateWindowHasRightImplementation} 
+                staticWorkspaces: ${this.staticWorkspaces}
+                spanDisplays: ${this.spanDisplays}
                 `;
     }
 }
