@@ -196,14 +196,15 @@ class Controller {
     }
 }
 
+const PROBLEM_APPACTIVATE = "- Another incompatible extension is active. Please disable the other extensions and restart gnome-shell";
+const PROBLEM_STATIC_WORKSPACES = `- The option "Static Workspaces" is not active`;
+const PROBLEM_SPAN_DISPLAYS = `- The option "Workspaces span displays" is not active`;
+
 class ConfigurationService {
     private readonly appActivateHasRightImplementation: boolean;
     private readonly activateWindowHasRightImplementation: boolean;
     private staticWorkspaces: boolean;
     private spanDisplays: boolean;
-    private readonly PROBLEM_APPACTIVATE: string;
-    private readonly PROBLEM_STATIC_WORKSPACES: string;
-    private readonly PROBLEM_SPAN_DISPLAYS: string;
 
     private warningMenu: {
         menu: PanelMenu.Button,
@@ -217,10 +218,6 @@ class ConfigurationService {
         this.staticWorkspaces = false;
         this.spanDisplays = false;
         this.warningMenu = null;
-
-        this.PROBLEM_APPACTIVATE = "- Another incompatible extension is active. Please disable the other extensions and restart gnome-shell";
-        this.PROBLEM_STATIC_WORKSPACES = `- The option "Static Workspaces" is not active`;
-        this.PROBLEM_SPAN_DISPLAYS = `- The option "Workspaces span displays" is not active`;
     }
 
     conditionallyEnableAutomaticSwitching(): void {
@@ -291,13 +288,13 @@ class ConfigurationService {
     getProblems(): string {
         let list: string[] = [];
         if (!(this.appActivateHasRightImplementation && this.activateWindowHasRightImplementation)) {
-            list.push(this.PROBLEM_APPACTIVATE);
+            list.push(PROBLEM_APPACTIVATE);
         }
         if (!this.staticWorkspaces) {
-            list.push(this.PROBLEM_STATIC_WORKSPACES);
+            list.push(PROBLEM_STATIC_WORKSPACES);
         }
         if (!this.spanDisplays) {
-            list.push(this.PROBLEM_SPAN_DISPLAYS);
+            list.push(PROBLEM_SPAN_DISPLAYS);
         }
         return `Switch workspaces on active monitor can't work properly, because of the following issues:\n\n${list.join("\n")}`;
     }
