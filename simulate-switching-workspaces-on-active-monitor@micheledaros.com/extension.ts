@@ -201,21 +201,22 @@ class ConfigurationService {
     private readonly _activateWindowHasRightImplementation: boolean;
     private _staticWorkspaces: boolean;
     private _spanDisplays: boolean;
-    private _warningMenu: PanelMenu.Button | null;
-    private _warningItem: PopupMenu.PopupMenuItem | null;
-    private _warningMenuText: string | null;
     private readonly _PROBLEM_APPACTIVATE: string;
     private readonly _PROBLEM_STATIC_WORKSPACES: string;
     private readonly _PROBLEM_SPAN_DISPLAYS: string;
+
+    private warningMenu: {
+        menu: PanelMenu.Button,
+        item: PopupMenu.PopupMenuItem,
+        text: string | null,
+    } | null;
 
     constructor() {
         this._appActivateHasRightImplementation = false;
         this._activateWindowHasRightImplementation = false;
         this._staticWorkspaces = false;
         this._spanDisplays = false;
-        this._warningMenu = null;
-        this._warningItem = null;
-        this._warningMenuText = null;
+        this.warningMenu = null;
 
         this._PROBLEM_APPACTIVATE = "- Another incompatible extension is active. Please disable the other extensions and restart gnome-shell";
         this._PROBLEM_STATIC_WORKSPACES = `- The option "Static Workspaces" is not active`;
@@ -242,38 +243,48 @@ class ConfigurationService {
 
     eventuallyDestroyWarningMenu(): void {
         maybeLog("warningMenu should be removed");
-        if (this._warningMenu) {
+        if (this.warningMenu !== null) {
             maybeLog("destroying warningMenu");
-            this._warningMenu.destroy();
-            this._warningMenu = null;
-            this._warningItem = null;
-            this._warningMenuText = null;
+            this.warningMenu.menu.destroy();
+            this.warningMenu = null;
         }
     }
 
     _showWarningMenu(): void {
         maybeLog("warningMenu should be shown");
-        if (this._warningMenu == null) {
+        if (this.warningMenu === null) {
             maybeLog("building warning menu");
-            this._warningMenu = new PanelMenu.Button(0.0, _("simulate-switching-workspaces-on-active-monitor"));
+            let warningMenu = new PanelMenu.Button(0.0, _("simulate-switching-workspaces-on-active-monitor"));
             let warningSymbol = new St.Label({
                 text: "\u26a0",  // ⚠, warning
                 y_expand: true,
                 y_align: Clutter.ActorAlign.CENTER,
             });
-            this._warningMenu.add_child(warningSymbol);
-            if (this._warningMenu.menu instanceof PopupMenu.PopupMenu) {
-                this._warningMenu.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-                this._warningItem = new PopupMenu.PopupMenuItem("just a placeholder text");
-                this._warningMenu.menu.addMenuItem(this._warningItem);
+            warningMenu.add_child(warningSymbol);
+
+            if (!(warningMenu.menu instanceof PopupMenu.PopupMenu)) {
+                // `PanelMenu.Button` should be created with a `PopupMenu.PopupMenu` unless the third parameter
+                // `dontCreateMenu` is set to `true` which is not the case (above).
+                throw new Error("This should not have happened. `PanelMenu.Button.menu` is not of type `PopupMenu.PopupMenu`.");
             }
+
+            warningMenu.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+            let warningItem = new PopupMenu.PopupMenuItem("just a placeholder text");
+            warningMenu.menu.addMenuItem(warningItem);
+
             maybeLog("adding the warning menu to the status area");
-            Main.panel.addToStatusArea("drive-menu", this._warningMenu);
+            Main.panel.addToStatusArea("drive-menu", warningMenu);
+
+            this.warningMenu = {
+                menu: warningMenu,
+                item: warningItem,
+                text: null,
+            };
         }
         let text = this.getProblems();
-        if (text !== this._warningMenuText) {
-            this._warningItem!.label.set_text(text); // TODO: check if `_warningItem` is not null instead of suppressing it
-            this._warningMenuText = text;
+        if (text !== this.warningMenu.text) {
+            this.warningMenu.item.label.set_text(text);
+            this.warningMenu.text = text;
         }
     }
 
