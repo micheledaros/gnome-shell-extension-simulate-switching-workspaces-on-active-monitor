@@ -13,7 +13,13 @@
   "homepage": "https://github.com/micheledaros/gnome-shell-extension-simulate-switching-workspaces-on-active-monitor#readme",
   "sideEffects": false,
   "scripts": {
-    "build": "tsc"
+    "clean": "rm -rf dist/",
+    "schemas": "mkdir -p dist/schemas && glib-compile-schemas --targetdir=dist/schemas/ schemas/",
+    "copy-assets": "mkdir -p dist/ && cp metadata.json dist/",
+    "build:typescript": "tsc",
+    "build": "npm run clean && npm run schemas && npm run build:typescript && npm run copy-assets",
+    "submit": "npm run build && cd dist/ && zip -r ~/simulate-switching-workspaces-on-active-monitor.zip *",
+    "install": "npm run build && rm -rf ~/.local/share/gnome-shell/extensions/simulate-switching-workspaces-on-active-monitor@micheledaros.com/ && cp -r dist/ ~/.local/share/gnome-shell/extensions/simulate-switching-workspaces-on-active-monitor@micheledaros.com/"
   },
   "devDependencies": {
     "typescript": "^5.4.5",

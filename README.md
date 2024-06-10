@@ -20,10 +20,15 @@ So it looks like you are switching workspaces only on the active monitor, leavin
 * `Ctrl+Alt+a` Switch to the next workspace on the active monitor
 
 
-## Install
+## Development
 
-* ```make install```
-* restart gnome shell
+In order to develop `npm` (v9 or later) must be installed. \
+IMPORTANT: All the following commands must be executed in the [simulate-switching-workspaces-on-active-monitor@micheledaros.com](https://github.com/micheledaros/gnome-shell-extension-simulate-switching-workspaces-on-active-monitor/tree/master/simulate-switching-workspaces-on-active-monitor%40micheledaros.com) directory.
+
+* Install the dependencies: `npm i`
+* Build the extension: `npm run build`
+* Install the extension (will also build it): `npm run install`
+  * After installing the extension, Gnome needs to be restarted/run nested. For that, please follow the steps in the [official guide](https://gjs.guide/extensions/development/creating.html#testing-the-extension).
 
 
 ## GNOME 45 notes
