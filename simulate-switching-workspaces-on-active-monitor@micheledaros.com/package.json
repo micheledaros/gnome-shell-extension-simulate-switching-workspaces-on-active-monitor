@@ -14,7 +14,7 @@
   "sideEffects": false,
   "scripts": {
     "clean": "rm -rf dist/",
-    "schemas": "mkdir -p dist/schemas && glib-compile-schemas --targetdir=dist/schemas/ schemas/",
+    "schemas": "mkdir -p dist/schemas && glib-compile-schemas --targetdir=dist/schemas/ schemas/ && cp schemas/*.xml dist/schemas",
     "copy-assets": "mkdir -p dist/ && cp metadata.json dist/",
     "build:typescript": "tsc",
     "build": "npm run clean && npm run schemas && npm run build:typescript && npm run copy-assets",
